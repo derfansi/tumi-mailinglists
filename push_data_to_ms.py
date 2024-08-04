@@ -18,7 +18,16 @@ class FileModifiedHandler(FileSystemEventHandler):
 
             if session.returncode == 0:
                 # Import entries as contacts
-                import_command = "Import-Csv .\\alumni.csv | ForEach-Object { New-MailContact -Name $_.Name -DisplayName $_.Name -ExternalEmailAddress $_.ExternalEmailAddress -FirstName $_.FirstName -LastName $_.LastName }"
+                import_command = """$contacts=Import-Csv "c:\bulkcontacts\import.csv" 
+foreach($contact in $contacts){
+Try{
+    New-MailContact -Name $contact.fullName -DisplayName $contact.fullName -ExternalEmailAddress $contact.email -FirstName $contact.firstName -LastName $contact.lastName
+    Set-MailContact $contact.Mail -HiddenFromAddressListsEnabled $true
+}
+catch{
+    Write-Warning "$_"
+}
+ }"""
                 subprocess.run(["powershell.exe", "-Command", import_command])
             else:
                 print("Failed to connect to Exchange Online PowerShell.")

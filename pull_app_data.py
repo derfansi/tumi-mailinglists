@@ -41,27 +41,13 @@ class AppDataFetcher:
         users = res.json()["data"]["users"]
         df = pd.json_normalize(users)
         
-        df = df.rename(columns={"fullName": "Kontaktperson", "firstName": "Vorname", "lastName": "Nachname", "email": "E-Mail"})
-        df["Unternehmen"] = ""
-        df["Telefon (geschäftlich)"] = ""
-        df["Mobiltelefon"] = ""
-        df["Faxnummer"] = ""
-        df["Titel"] = ""
-        df["Website"] = ""
-        df["Straße und Hausnummer"] = ""
-        df["Straße und Hausnummer 2"] = ""
-        df["Ort"] = ""
-        df["Bundesland"] = ""
-        df["Postleitzahl"] = ""
-        df["Land oder Region"] = ""
-        
         return df
         
     
 class TokenScraper:
     def __init__(self):
         
-        with open('/home/justin/Dokumente/Projekte/tumi-mailinglists/credentials.txt', 'r') as file:
+        with open('credentials.txt', 'r') as file:
             lines = file.readlines()
             self.esn_login = lines[0].split()[0]
             self.esn_password = lines[0].split()[1]
