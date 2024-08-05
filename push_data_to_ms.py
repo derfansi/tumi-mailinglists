@@ -1,46 +1,37 @@
 import time
-from watchdog.observers import Observer
-from watchdog.events import FileSystemEventHandler
 import subprocess
+import os
 
-
-
-class FileModifiedHandler(FileSystemEventHandler):
+script_path = "push_to_ms.ps1"
+file_names = ["deleted_alumni.csv", "deleted_all_members.csv", "deleted_full_members.csv", "deleted_trial_members.csv", "deleted_helpers.csv", "added_alumni.csv", "added_all_members.csv", "added_full_members.csv", "added_trial_members.csv", "added_helpers.csv", "added_contacts.csv", "deleted_contacts.csv"]
     
-    def __init__(self):
-        self.file_names = ["alumni.csv", "trial_members.csv", "full_members.csv", "all_members.csv", "helpers.csv"]
-    
-    def on_modified(self, event):
+def on_modified(self, event):
+    try:
+        # Get the initial modification time of the file
+        initial_mod_time = os.path.getmtime(file_name)
+
+        while True:
+            # Check the file modification time
+            current_mod_time = os.path.getmtime(file_name)
+            
+            if current_mod_time != initial_mod_time:
+                break
+
+            time.sleep(10 * 60)
         
-        for file_name in self.file_names:
+        for file_name in file_names:
             if event.src_path.endswith(file_name):
-                connect_command = """
-                $ApplicationId = 'your-application-id'
-                $TenantId = 'your-tenant-id'
-                $CertificateThumbprint = 'your-certificate-thumbprint'
-                Connect-ExchangeOnline -AppId $ApplicationId -Organization $TenantId -CertificateThumbprint $CertificateThumbprint
-                """
-                session = subprocess.Popen(["powershell.exe", "-Command", connect_command], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-                stdout, stderr = session.communicate()
+                with subprocess.run(["powershell.exe", "-File", script_path], capture_output=True, text=True) as result:
+                    if result.returncode != 0:
+                        print(result.stderr)
+                break
 
-            if session.returncode == 0:
-                # Import entries as contacts
-                import_command = """$contacts=Import-Csv "c:\bulkcontacts\import.csv" 
-foreach($contact in $contacts){
-Try{
-    New-MailContact -Name $contact.fullName -DisplayName $contact.fullName -ExternalEmailAddress $contact.email -FirstName $contact.firstName -LastName $contact.lastName
-    Set-MailContact $contact.Mail -HiddenFromAddressListsEnabled $true
-}
-catch{
-    Write-Warning "$_"
-}
- }"""
-                subprocess.run(["powershell.exe", "-Command", import_command])
-            else:
-                print("Failed to connect to Exchange Online PowerShell.")
+    except Exception as e:
+        print(f"An error occurred: {e}")
+        return None
+
 
 if __name__ == "__main__":
-    event_handler = FileModifiedHandler()
     observer = Observer()
     observer.schedule(event_handler, path='.', recursive=False)
     observer.start()

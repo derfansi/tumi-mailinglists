@@ -21,19 +21,65 @@ class AppDataFetcher:
         self.scraper = TokenScraper()
 
     def start(self):
+
+        #load old dataframes
+        old_contacts_df = pd.read_csv('current_contacts.csv')
+
+        old_full_members_df = pd.read_csv('full_members.csv')
+        old_trial_members_df = pd.read_csv('trial_members.csv')
+        old_all_members_df = pd.read_csv('all_members.csv')
+        old_alumni_df = pd.read_csv('alumni.csv')
+        old_helpers_df = pd.read_csv('helpers.csv')
+
+        #create new dataframes
         full_members_df = self.fetch_from_app(full_members_query)
         trial_members_df = self.fetch_from_app(trial_members_query)
         all_members_df = pd.concat([full_members_df, trial_members_df])
         alumni_df = self.fetch_from_app(alumni_query)
         helpers_df = self.fetch_from_app(helper_query)  
-        
+
+        current_contacts_df = pd.concat([all_members_df, alumni_df, helpers_df])
+
+
+        #compare changes in users and save changes to files
+        added_contacts_df, deleted_contacts_df = self.diff_df(old_contacts_df, current_contacts_df)
+
+        #remove unnecessary columns from distrolist dataframes
+        full_members_df = full_members_df.filter(['email'])
+        trial_members_df = trial_members_df.filter(['email'])
+        all_members_df = all_members_df.filter(['email'])
+        alumni_df = alumni_df.filter(['email'])
+        helpers_df = helpers_df.filter(['email'])
+
+        #compare changes in distrolists and save changes to files
+        added_full_members_df, deleted_full_members_df = self.diff_df(old_full_members_df, full_members_df)
+        added_trial_members_df, deleted_trial_members_df = self.diff_df(old_trial_members_df, trial_members_df)
+        added_all_members_df, deleted_all_members_df = self.diff_df(old_all_members_df, all_members_df)
+        added_alumni_df, deleted_alumni_df = self.diff_df(old_alumni_df, alumni_df)
+        added_helpers_df, deleted_helpers_df = self.diff_df(old_helpers_df, helpers_df)
+
+        #save everything to files
+        current_contacts_df.to_csv('current_contacts.csv', index=False)
+        added_contacts_df.to_csv('added_contacts.csv', index=False)
+        deleted_contacts_df.to_csv('deleted_contacts.csv', index=False)
+
         full_members_df.to_csv('full_members.csv', index=False)
         trial_members_df.to_csv('trial_members.csv', index=False)
         all_members_df.to_csv('all_members.csv', index=False)
         alumni_df.to_csv('alumni.csv', index=False)
         helpers_df.to_csv('helpers.csv', index=False)
-        
-        #time.sleep(2* 60 * 60)
+
+        added_full_members_df.to_csv('added_full_members.csv', index=False)
+        added_trial_members_df.to_csv('added_trial_members.csv', index=False)
+        added_all_members_df.to_csv('added_all_members.csv', index=False)
+        added_alumni_df.to_csv('added_alumni.csv', index=False)
+        added_helpers_df.to_csv('added_helpers.csv', index=False)
+
+        deleted_full_members_df.to_csv('deleted_full_members.csv', index=False)
+        deleted_trial_members_df.to_csv('deleted_trial_members.csv', index=False)
+        deleted_all_members_df.to_csv('deleted_all_members.csv', index=False)
+        deleted_alumni_df.to_csv('deleted_alumni.csv', index=False)
+        deleted_helpers_df.to_csv('deleted_helpers.csv', index=False)
     
     # returns users in the form of {email: email, fullName: fullName, firstName: firstName, lastName: lastName}
     def fetch_from_app(self, query):
@@ -42,6 +88,9 @@ class AppDataFetcher:
         df = pd.json_normalize(users)
         
         return df
+
+    def diff_df(self, old_df, new_df):
+        return new_df[~new_df['email'].isin(old_df['email'])], old_df[~old_df['email'].isin(new_df['email'])]
         
     
 class TokenScraper:
